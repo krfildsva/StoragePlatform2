@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decentralized Storage Marketplace</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #001f54;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: white;
+            padding: 20px;
+        }
+
+        h2, h3 {
+            color: white;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 400px;
+            background: white;
+            color: black;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            padding: 20px;
+        }
+
+        input, button {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #3b2196;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #001f54;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .product-listing {
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .product-listing:last-child {
+            border-bottom: none;
+        }
+
+        .price-in-usd {
+            font-weight: bold;
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h2>Decentralized Storage Marketplace</h2>
+
+    <div class="container" id="signInContainer">
+        <button id="connectWallet">Connect Wallet</button>
+        <button id="disconnectWallet" class="hidden">Disconnect Wallet</button>
+    </div>
+
+    <!-- Storage Search -->
+    <div class="container hidden" id="storageSearchContainer">
+        <h3>Search Storage</h3>
+        <input type="number" id="searchSize" placeholder="Enter Storage Size (GB)">
+        <input type="number" id="searchMaxPrice" placeholder="Max Price (USD)">
+        <button id="searchStorage">Search</button>
+        <div id="searchResults"></div>
+    </div>
+
+    <!-- Provider Profile / Product List -->
+    <div class="container hidden" id="providerProfileContainer">
+        <h3>Provider Profile</h3>
+        <div id="providerProfile"></div>
+    </div>
+    <h1>Decentralized Storage Marketplace</h1>
+    
+    <h1>Upload a File for Encryption and Fragmentation</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="file" id="fileInput" required />
+        <button type="submit">Upload File</button>
+    </form>
+    <p id="message"></p>
+    
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js/dist/web3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/1.6.1/web3.min.js"></script>
+    <script>
+        const form = document.getElementById('uploadForm');
+        const message = document.getElementById('message');
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const formData = new FormData(form);
+
+    try {
+        const response = await fetch('/upload', {
+    method: 'POST',
+    body: formData
+})
+.then(response => response.json())
+.then(data => {
+    console.log('Uploaded successfully:', data);
+    const filename = data.filename; // Save this for retrieval later
+});
+
+        const text = await response.text();
+        message.textContent = text;
+    } catch (error) {
+        console.error('Error:', error);
+        message.textContent = 'Failed to upload file.';
+    }
+});
+
+        let accounts = [];
+        const providerProducts = [
+            { username: "Provider1", availableStorage: 100, pricePerGB: 0 },
+            { username: "Provider2", availableStorage: 200, pricePerGB: 1.5 },
+            { username: "Provider3", availableStorage: 500, pricePerGB: 1.2 }
+        ];
+
+        const connectWalletBtn = document.getElementById('connectWallet');
+        const disconnectWalletBtn = document.getElementById('disconnectWallet');
+        const storageSearchContainer = document.getElementById('storageSearchContainer');
+        const signInContainer = document.getElementById('signInContainer');
+        const providerProfileContainer = document.getElementById('providerProfileContainer');
+
+        // Web3 Wallet Connection
+        connectWalletBtn.addEventListener('click', async () => {
+            if (window.ethereum) {
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const web3 = new Web3(window.ethereum);
+                    accounts = await web3.eth.getAccounts();
+                    alert(`Connected account: ${accounts[0]}`);
+
+                    connectWalletBtn.classList.add('hidden');
+                    disconnectWalletBtn.classList.remove('hidden');
+                    storageSearchContainer.classList.remove('hidden');
+                } catch (error) {
+                    console.error(error);
+                    alert('Connection failed. Please try again.');
+                }
+            } else {
+                alert('Please install MetaMask!');
+            }
+        });
+
+        document.getElementById('connectWallet').addEventListener('click', async () => {
+    if (window.ethereum) {
+        try {
+            // Force MetaMask to ask for account selection on each click
+            await window.ethereum.request({
+                method: 'wallet_requestPermissions',
+                params: [{ eth_accounts: {} }],
+            });
+            const web3 = new Web3(window.ethereum);
+            const accounts = await web3.eth.getAccounts();
+            alert(`Connected account: ${accounts[0]}`);
+        } catch (error) {
+            console.error(error);
+            alert('Connection failed. Please try again.');
+        }
+    } else {
+        alert('Please install MetaMask!');
+    }
+});
+
+
+        // Search Storage
+        document.getElementById('searchStorage').addEventListener('click', () => {
+            const size = document.getElementById('searchSize').value;
+            const maxPrice = document.getElementById('searchMaxPrice').value;
+            const searchResults = document.getElementById('searchResults');
+            searchResults.innerHTML = '';
+
+            const filteredProducts = providerProducts.filter(product => 
+                product.availableStorage >= size && product.pricePerGB <= maxPrice
+            );
+
+            if (filteredProducts.length === 0) {
+                searchResults.innerHTML = '<p>No providers found matching the criteria.</p>';
+                return;
+            }
+
+            filteredProducts.forEach(product => {
+                const productDiv = document.createElement('div');
+                productDiv.className = 'product-listing';
+                productDiv.innerHTML = `
+                    <p><strong>${product.username}</strong></p>
+                    <p>Available Storage: ${product.availableStorage} GB</p>
+                    <p>Price: $<span class="price-in-usd">${product.pricePerGB}</span> per GB</p>
+                    <button onclick="viewProviderProfile('${product.username}')">View Profile</button>
+                `;
+                searchResults.appendChild(productDiv);
+            });
+        });
+
+        // View Provider Profile
+        function viewProviderProfile(username) {
+            const provider = providerProducts.find(p => p.username === username);
+            if (!provider) return;
+
+            document.getElementById('providerProfile').innerHTML = `
+                <p><strong>${provider.username}</strong></p>
+                <p>Available Storage: ${provider.availableStorage} GB</p>
+                <p>Price per GB: $${provider.pricePerGB}</p>
+                <button onclick="buyStorage(${provider.availableStorage}, ${provider.pricePerGB})">Buy Storage</button>
+            `;
+
+            storageSearchContainer.classList.add('hidden');
+            providerProfileContainer.classList.remove('hidden');
+        }
+
+        // Buy Storage (Simulated Payment)
+        async function buyStorage(size, pricePerGB) {
+    const totalAmount = (size * pricePerGB).toFixed(2);
+    const ethPriceInUSD = 1700;
+
+    const totalEth = (totalAmount / ethPriceInUSD).toFixed(6);
+
+    if (window.ethereum) {
+        try {
+            const web3 = new Web3(window.ethereum);
+            await web3.eth.sendTransaction({
+                from: accounts[0],
+                to: '0x88a172c63A0e3404bf5c45e4516aaaF5462C6B29',
+                value: web3.utils.toWei(totalEth, 'ether')
+            });
+            alert('Payment successful! You have bought the storage.');
+
+            // Ensure you're sending all required data
+            const response = await fetch('http://localhost:5000/saveAccount', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    walletAddress: accounts[0],  // Sending wallet address
+                    storageBought: size,         // Sending storage size
+                    totalSpent: totalAmount      // Sending total amount spent
+                })
+            });
+
+            const data = await response.json();
+            console.log(data);
+        } catch (error) {
+            console.error(error);
+            alert('Transaction failed.');
+        }
+    }
+}
+
+
+    </script>
+    <script src="index.js"></script>
+</body>
+</html>
